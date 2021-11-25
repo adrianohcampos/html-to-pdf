@@ -1,15 +1,17 @@
 require('dotenv').config();
 const express = require("express");
 const puppeteer = require("puppeteer");
-//const s3Client = require('./s3Client');
-const fs = require('fs');
+const s3Client = require('./s3Client');
+const { v4: uuidv4 } = require('uuid');
+
 const app = express();
-const time = new Date().getTime();
 
 app.get("/pdf", async (req, res) => {
 
+    const time = new Date().getTime();
     const url = req.query.target;
     const key = req.query.key
+    const path = "class-studio/pdf/";
     let json = '';
 
     if (key == process.env.KEY) {
@@ -30,37 +32,39 @@ app.get("/pdf", async (req, res) => {
             waitUntil: "networkidle0"
         });
 
-        // Set filename
-        let pageTitle = await webPage.title();
-        pageTitle = pageTitle.replace(/[^a-zA-Z0-9]/g, '_');
-        pageTitle = pageTitle.toLowerCase();
-        const filename = pageTitle + '_' + time + '.pdf';
+        // Set filename        
+        const filename = uuidv4() + '.pdf';
+
+        // declare html markup for footer
+        html = `<div style="font-size: 13px; padding-top: 8px; text-align: center; width: 100%;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>`;
 
         // Set pdf file name
         const pdfConfig = {
-            path: filename, // Saves pdf to disk. 
             format: 'A4',
+            displayHeaderFooter: true,
             printBackground: true,
+            headerTemplate: '<div></div>',
+            footerTemplate: html,
             margin: { // Word's default A4 margins
-                top: '1cm',
-                bottom: '1cm',
-                left: '1cm',
-                right: '1cm'
+                top: '15mm',
+                bottom: '17mm',
+                left: '15mm',
+                right: '15mm'
             },
         };
 
         // Return the pdf buffer. Useful for saving the file not to disk. 
-        await webPage.pdf(pdfConfig);
+        const pdf = await webPage.pdf(pdfConfig);
 
         await browser.close();
 
         // Upload pdf to AWS
-        // const urlaws = await s3Client.uploadFile(newname, newname);
+        const urlaws = await s3Client.uploadFile(path + filename, pdf, "application/pdf");
 
         json = JSON.stringify({
             target: url,
             file: filename,
-            // aws: urlaws
+            aws: urlaws
         });
 
     } else {
@@ -71,6 +75,17 @@ app.get("/pdf", async (req, res) => {
         });
 
     }
+
+    res.contentType("application/json");
+    res.send(json);
+})
+
+app.get("/pdf-merge", async (req, res) => {
+
+    json = JSON.stringify({
+        target: url,
+        error: 'Function not implemented'
+    });
 
     res.contentType("application/json");
     res.send(json);
