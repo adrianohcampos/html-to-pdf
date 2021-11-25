@@ -8,7 +8,6 @@ const app = express();
 
 app.get("/pdf", async (req, res) => {
 
-    const time = new Date().getTime();
     const url = req.query.target;
     const key = req.query.key
     const path = "class-studio/pdf/";
