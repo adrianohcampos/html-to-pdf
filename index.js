@@ -17,7 +17,8 @@ app.get("/pdf", async (req, res) => {
 
         // Create an instance of the chrome browser
         const browser = await puppeteer.launch({
-            headless: true
+            headless: true,
+            executablePath: '/usr/bin/chromium-browser'
         });
 
         // Create a new page
