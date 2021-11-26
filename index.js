@@ -6,34 +6,53 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 
-app.get("/pdf", async (req, res) => {
+app.get("/", async (req, res) => {
+    console.log("GET '/' - Function not found");
+    json = JSON.stringify({
+        error: 'Function not found'
+    });
 
+    res.contentType("application/json");
+    res.send(json);
+})
+
+app.get("/pdf", async (req, res) => {
+    console.log("GET", "/pdf - Start");
     const url = req.query.target;
     const key = req.query.key
     const path = "class-studio/pdf/";
     let json = '';
 
-    if (key == process.env.KEY) {
-
+    if (url && url != '' && key == process.env.KEY) {
+        console.log("KEY", "ok");
         // Create an instance of the chrome browser
+        console.log("browser", "launch");
         const browser = await puppeteer.launch({
             headless: true,
-            executablePath: '/usr/bin/chromium-browser'
+            executablePath: '/usr/bin/chromium-browser',
+            args: ["--no-sandbox"]
         });
 
+
         // Create a new page
+        console.log("browser", "newPage");
         const webPage = await browser.newPage();
 
+
         // Configure the navigation timeout
+        console.log("webPage", "setDefaultNavigationTimeout");
         await webPage.setDefaultNavigationTimeout(0);
 
         // Navigate to some website e.g Our Code World
+        console.log("webPage", "goto: " + url);
         await webPage.goto(url, {
             waitUntil: "networkidle0"
         });
 
-        // Set filename        
+        // Set filename   
+        console.log("filename", "init");
         const filename = uuidv4() + '.pdf';
+        console.log("filename", filename);
 
         // declare html markup for footer
         html = `<div style="font-size: 13px; padding-top: 8px; text-align: center; width: 100%;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>`;
@@ -53,12 +72,15 @@ app.get("/pdf", async (req, res) => {
             },
         };
 
+        console.log("webPage", "pdf");
         // Return the pdf buffer. Useful for saving the file not to disk. 
         const pdf = await webPage.pdf(pdfConfig);
 
+        console.log("browser", "close");
         await browser.close();
 
         // Upload pdf to AWS
+        console.log("s3Client", "uploadFile");
         const urlaws = await s3Client.uploadFile(path + filename, pdf, "application/pdf");
 
         json = JSON.stringify({
@@ -83,7 +105,6 @@ app.get("/pdf", async (req, res) => {
 app.get("/pdf-merge", async (req, res) => {
 
     json = JSON.stringify({
-        target: url,
         error: 'Function not implemented'
     });
 
