@@ -4,7 +4,7 @@ const puppeteer = require("puppeteer");
 const s3Client = require('./s3Client');
 const { v4: uuidv4 } = require('uuid');
 
-const app = express();
+const app = express(); 
 
 app.get("/", async (req, res) => {
     console.log("GET '/' - Function not found");
